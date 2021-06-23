@@ -144,7 +144,7 @@ const libime::PinyinDictionary &TableEngine::pinyinDict() {
     if (!pinyinLoaded_) {
         try {
             pinyinDict_.load(libime::PinyinDictionary::SystemDict,
-                             LIBIME_INSTALL_PKGDATADIR "/sc.dict",
+                             stringutils::joinPath(getenv("LIBIME_INSTALL_PKGDATADIR"), "sc.dict").c_str(),
                              libime::PinyinDictFormat::Binary);
         } catch (const std::exception &) {
         }

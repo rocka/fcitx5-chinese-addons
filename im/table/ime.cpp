@@ -111,7 +111,7 @@ TableIME::requestDict(const std::string &name) {
         try {
             auto dict = std::make_unique<libime::TableBasedDictionary>();
             auto dictFile = StandardPath::global().open(
-                StandardPath::Type::PkgData, *root.config->file, O_RDONLY);
+                StandardPath::Type::PkgData, stringutils::joinPath(getenv("LIBIME_INSTALL_PKGDATADIR"), *root.config->file), O_RDONLY);
             TABLE_DEBUG() << "Load table at: " << *root.config->file;
             if (dictFile.fd() < 0) {
                 throw std::runtime_error("Couldn't open file");
