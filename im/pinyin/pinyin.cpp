@@ -606,12 +606,29 @@ PinyinEngine::PinyinEngine(Instance *instance)
         std::make_unique<libime::UserLanguageModel>(
             libime::DefaultLanguageModelResolver::instance()
                 .languageModelFileForLanguage("zh_CN")));
-    ime_->dict()->load(libime::PinyinDictionary::SystemDict,
-                       LIBIME_INSTALL_PKGDATADIR "/sc.dict",
-                       libime::PinyinDictFormat::Binary);
+    const auto &standardPath = StandardPath::global();
+    do {
+        auto file = standardPath.openSystem(StandardPath::Type::Data,
+                                            "libime/sc.dict", O_RDONLY);
+        if (file.fd() < 0) {
+            PINYIN_ERROR() << "Cannot open pinyin system dict.";
+            break;
+        }
+
+        try {
+            boost::iostreams::stream_buffer<
+                    boost::iostreams::file_descriptor_source>
+                    buffer(file.fd(), boost::iostreams::file_descriptor_flags::
+            never_close_handle);
+            std::istream in(&buffer);
+            ime_->dict()->load(libime::PinyinDictionary::SystemDict, in,
+                               libime::PinyinDictFormat::Binary);
+        } catch (const std::exception &e) {
+            PINYIN_ERROR() << "Failed to load pinyin system dict: " << e.what();
+        }
+    } while (0);
     prediction_.setUserLanguageModel(ime_->model());
 
-    const auto &standardPath = StandardPath::global();
     do {
         auto file = standardPath.openUser(StandardPath::Type::PkgData,
                                           "pinyin/user.dict", O_RDONLY);

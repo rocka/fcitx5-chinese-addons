@@ -142,12 +142,27 @@ void TableEngine::save() { ime_->saveAll(); }
 
 const libime::PinyinDictionary &TableEngine::pinyinDict() {
     if (!pinyinLoaded_) {
-        try {
-            pinyinDict_.load(libime::PinyinDictionary::SystemDict,
-                             LIBIME_INSTALL_PKGDATADIR "/sc.dict",
-                             libime::PinyinDictFormat::Binary);
-        } catch (const std::exception &) {
-        }
+        const auto &standardPath = StandardPath::global();
+        do {
+            auto file = standardPath.openSystem(StandardPath::Type::Data,
+                                                "libime/sc.dict", O_RDONLY);
+            if (file.fd() < 0) {
+                TABLE_ERROR() << "Cannot open pinyin system dict.";
+                break;
+            }
+
+            try {
+                boost::iostreams::stream_buffer<
+                        boost::iostreams::file_descriptor_source>
+                        buffer(file.fd(), boost::iostreams::file_descriptor_flags::
+                never_close_handle);
+                std::istream in(&buffer);
+                pinyinDict_.load(libime::PinyinDictionary::SystemDict, in,
+                                 libime::PinyinDictFormat::Binary);
+            } catch (const std::exception &e) {
+                TABLE_ERROR() << "Failed to load pinyin system dict: " << e.what();
+            }
+        } while (0);
         pinyinLoaded_ = true;
     }
     return pinyinDict_;
