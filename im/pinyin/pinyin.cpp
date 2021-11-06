@@ -432,7 +432,8 @@ void PinyinEngine::updatePreedit(InputContext *inputContext) const {
         inputPanel.setClientPreedit(preedit);
     }
 
-    if (!config_.showPreeditInApplication.value()) {
+    if (!config_.showPreeditInApplication.value() ||
+        !inputContext->capabilityFlags().test(CapabilityFlag::Preedit)) {
         Text preedit(preeditWithCursor.first);
         preedit.setCursor(preeditWithCursor.second);
         inputPanel.setPreedit(preedit);
@@ -1048,7 +1049,8 @@ bool PinyinEngine::handleCandidateList(KeyEvent &event) {
         }
         return true;
     }
-    if (event.key().check(FcitxKey_space)) {
+    if (event.key().check(FcitxKey_space) ||
+        event.key().check(FcitxKey_KP_Space)) {
         if (candidateList->size()) {
             event.filterAndAccept();
             int idx = candidateList->cursorIndex();
@@ -1064,6 +1066,12 @@ bool PinyinEngine::handleCandidateList(KeyEvent &event) {
         auto *pageable = candidateList->toPageable();
         if (!pageable->hasPrev()) {
             if (pageable->usedNextBefore()) {
+                event.filterAndAccept();
+                return true;
+            }
+            // Only let key go through if it can reach handlePunc.
+            auto c = Key::keySymToUnicode(event.key().sym());
+            if (event.key().hasModifier() || !c) {
                 event.filterAndAccept();
                 return true;
             }
@@ -1495,7 +1503,8 @@ void PinyinEngine::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
                 state->context_.backspace();
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Delete)) {
+        } else if (event.key().check(FcitxKey_Delete) ||
+                   event.key().check(FcitxKey_KP_Delete)) {
             state->context_.del();
             event.filterAndAccept();
         } else if (event.key().check(FcitxKey_BackSpace, KeyState::Ctrl)) {
@@ -1507,20 +1516,24 @@ void PinyinEngine::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
                 state->context_.erase(cursor, state->context_.cursor());
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Delete, KeyState::Ctrl)) {
+        } else if (event.key().check(FcitxKey_Delete, KeyState::Ctrl) ||
+                   event.key().check(FcitxKey_KP_Delete, KeyState::Ctrl)) {
             auto cursor = state->context_.pinyinAfterCursor();
             if (cursor >= 0 &&
                 static_cast<size_t>(cursor) <= state->context_.size()) {
                 state->context_.erase(state->context_.cursor(), cursor);
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Home)) {
+        } else if (event.key().check(FcitxKey_Home) ||
+                   event.key().check(FcitxKey_KP_Home)) {
             state->context_.setCursor(state->context_.selectedLength());
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_End)) {
+        } else if (event.key().check(FcitxKey_End) ||
+                   event.key().check(FcitxKey_KP_End)) {
             state->context_.setCursor(state->context_.size());
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Left)) {
+        } else if (event.key().check(FcitxKey_Left) ||
+                   event.key().check(FcitxKey_KP_Left)) {
             if (state->context_.cursor() == state->context_.selectedLength()) {
                 state->context_.cancel();
             }
@@ -1529,13 +1542,15 @@ void PinyinEngine::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
                 state->context_.setCursor(cursor - 1);
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Right)) {
+        } else if (event.key().check(FcitxKey_Right) ||
+                   event.key().check(FcitxKey_KP_Right)) {
             auto cursor = state->context_.cursor();
             if (cursor < state->context_.size()) {
                 state->context_.setCursor(cursor + 1);
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Left, KeyState::Ctrl)) {
+        } else if (event.key().check(FcitxKey_Left, KeyState::Ctrl) ||
+                   event.key().check(FcitxKey_KP_Left, KeyState::Ctrl)) {
             if (state->context_.cursor() == state->context_.selectedLength()) {
                 state->context_.cancel();
             }
@@ -1544,7 +1559,8 @@ void PinyinEngine::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
                 state->context_.setCursor(cursor);
             }
             event.filterAndAccept();
-        } else if (event.key().check(FcitxKey_Right, KeyState::Ctrl)) {
+        } else if (event.key().check(FcitxKey_Right, KeyState::Ctrl) ||
+                   event.key().check(FcitxKey_KP_Right, KeyState::Ctrl)) {
             auto cursor = state->context_.pinyinAfterCursor();
             if (cursor >= 0 &&
                 static_cast<size_t>(cursor) <= state->context_.size()) {
@@ -1685,6 +1701,17 @@ void PinyinEngine::save() {
                 return false;
             }
         });
+}
+
+std::string PinyinEngine::subMode(const InputMethodEntry &entry,
+                                  InputContext &inputContext) {
+    FCITX_UNUSED(inputContext);
+    if (entry.uniqueName() == "shuangpin" && *config_.showShuangpinMode &&
+        *config_.shuangpinProfile != ShuangpinProfileEnum::Custom) {
+        return ShuangpinProfileEnumI18NAnnotation::toString(
+            *config_.shuangpinProfile);
+    }
+    return {};
 }
 
 #ifdef ENABLE_CLOUDPINYIN
