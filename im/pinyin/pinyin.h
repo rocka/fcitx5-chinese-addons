@@ -66,7 +66,7 @@ FCITX_CONFIGURATION(
                          ShuangpinProfileEnum::Ziranma};
     Option<bool> showShuangpinMode{this, "ShowShuangpinMode",
                                    _("Show current shuangpin mode"), true};
-    Option<int, IntConstrain> pageSize{this, "PageSize", _("Page size"), 5,
+    Option<int, IntConstrain> pageSize{this, "PageSize", _("Page size"), 7,
                                        IntConstrain(3, 10)};
     Option<bool> spellEnabled{this, "SpellEnabled", _("Enable Spell"), true};
     Option<bool> emojiEnabled{this, "EmojiEnabled", _("Enable Emoji"), true};
@@ -78,7 +78,7 @@ FCITX_CONFIGURATION(
                                                IntConstrain(1, 10)};
     Option<bool> showPreeditInApplication{this, "PreeditInApplication",
                                           _("Show preedit within application"),
-                                          false};
+                                          true};
     Option<bool> preeditCursorPositionAtBeginning{
         this, "PreeditCursorPositionAtBeginning",
         _("Fix embedded preedit cursor at the beginning of the preedit"), true};
